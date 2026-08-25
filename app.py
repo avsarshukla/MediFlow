@@ -268,4 +268,4 @@ with tab3:
         st.error("Invalid password. Try '1234'.")
 
 # ---------- FOOTER ----------
-st.caption("MediKiosk Allopathy Dual‑Tier Demo – No backend, all data is static.")
+st.caption("MediKiosk Allopathy Dual‑Tier Demo.")
