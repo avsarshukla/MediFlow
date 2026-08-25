@@ -241,4 +241,4 @@ with tab3:
             st.write("**Cardio/Resp:**", f["cardio_resp"])
         st.divider()
         summary = f"{age}yo patient with {f['reason'].lower()}. Hx: {f['past_surgeries']}. Allergies: {', '.join(f['allergies'])}. Meds: {f['medications']}."
-        st.text_area("Edit Summary", value=summary)₹
+        st.text_area("Edit Summary", value=summary)
