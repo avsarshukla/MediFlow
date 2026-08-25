@@ -8,42 +8,40 @@ from datetime import datetime
 # ---------- PREMADE 60‑YEAR‑OLD PROFILE ----------
 PREMATURE = {
     "name": "Ramesh Sharma",
-    "dob": "1966-03-15",                    # ~60 years
+    "dob": "1966-03-15",                        # ~60 years
     "blood_group": "O+",
-    "chief_complaint": "Acute substernal chest pain radiating to left arm",
+    "reason": "Acute substernal chest pain radiating to left arm",
     "duration": "45 minutes",
-    "site": "Substernal",
+    "location_radiation": "Substernal, radiating to left arm and jaw",
     "onset": "Acute while walking",
     "character": "Squeezing / Heavy",
-    "associated": "Diaphoresis, Shortness of breath",
     "severity": 8,
     "diabetes": "Type 2",
-    "allergies": ["Environmental/Dust", "Medication"],   # includes dust and penicillin
-    "past_history": "Hypertension (10 yrs), Type 2 Diabetes (8 yrs)",
+    "past_surgeries": "Hypertension (10 yrs), Type 2 Diabetes (8 yrs), No surgeries",
     "medications": "Metformin 500mg BD, Amlodipine 5mg OD",
-    "family_history": "Father: Hypertension",
-    "tobacco": "Never",
-    "alcohol": "Occasional",
-    "ros_general": "Fatigue",
-    "ros_cardio": "Chest tightness"
+    "allergies": ["Environmental/Dust", "Medication"],   # dust and penicillin
+    "tobacco_alcohol": "Never smoker, occasional alcohol",
+    "cardio_resp": "Chest tightness, no SOB at rest"
 }
 
 # ---------- SESSION STATE ----------
 if "form_data" not in st.session_state:
-    # Pre‑fill with the premade data for quick demo
     st.session_state.form_data = {
         "name": PREMATURE["name"],
         "dob": PREMATURE["dob"],
         "blood_group": PREMATURE["blood_group"],
-        "chief_complaint": PREMATURE["chief_complaint"],
+        "reason": PREMATURE["reason"],
         "duration": PREMATURE["duration"],
-        "site": PREMATURE["site"],
+        "location_radiation": PREMATURE["location_radiation"],
         "onset": PREMATURE["onset"],
         "character": PREMATURE["character"],
-        "associated": PREMATURE["associated"],
         "severity": PREMATURE["severity"],
         "diabetes": PREMATURE["diabetes"],
+        "past_surgeries": PREMATURE["past_surgeries"],
+        "medications": PREMATURE["medications"],
         "allergies": PREMATURE["allergies"],
+        "tobacco_alcohol": PREMATURE["tobacco_alcohol"],
+        "cardio_resp": PREMATURE["cardio_resp"],
     }
 
 # ---------- PAGE CONFIG ----------
@@ -60,84 +58,97 @@ def get_age(dob_str):
         return None
 
 # ---------- TABS ----------
-tab1, tab2, tab3 = st.tabs(["📋 Patient Intake (10 Questions)", "🆘 Emergency QR", "👨‍⚕️ Doctor Dashboard"])
+tab1, tab2, tab3 = st.tabs(["📋 Patient Intake (15 Questions)", "🆘 Emergency QR", "👨‍⚕️ Doctor Dashboard"])
 
 # ============================================================
 # TAB 1: PATIENT INTAKE
 # ============================================================
 with tab1:
-    st.header("Patient Intake – 10 Key Questions")
-    st.caption("Fields are pre‑filled with the demo 60‑year‑old profile. Edit as needed.")
+    st.header("Patient Intake – 15 Crucial Questions")
+    st.caption("Pre‑filled with the demo 60‑year‑old profile. Edit as needed.")
 
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("Demographics")
-        # Q1
+        # 1. Full Name
         name = st.text_input("**1. Full Name**", value=st.session_state.form_data["name"])
-        # Q2
+        # 2. Date of Birth
         dob = st.date_input("**2. Date of Birth**", value=datetime.strptime(st.session_state.form_data["dob"], "%Y-%m-%d"))
-        # Q3
+        # 3. Blood Group
         blood_group = st.selectbox(
             "**3. Blood Group**",
             ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Unknown"],
             index=["A+","A-","B+","B-","AB+","AB-","O+","O-","Unknown"].index(st.session_state.form_data["blood_group"])
         )
-        # Q4
-        chief_complaint = st.text_area("**4. Primary Visit Reason**", value=st.session_state.form_data["chief_complaint"], height=70)
-        # Q5
-        duration = st.text_input("**5. Symptom Duration**", value=st.session_state.form_data["duration"])
 
-        st.subheader("Additional Clinical Data (for QR & Dashboard)")
-        # Diabetes – with options
+        st.subheader("Chief Complaint & HPI")
+        # 4. Main Reason for Visit
+        reason = st.text_area("**4. Main Reason for Visit Today**", value=st.session_state.form_data["reason"], height=70)
+        # 5. Symptom Duration
+        duration = st.text_input("**5. Symptom Duration**", value=st.session_state.form_data["duration"])
+        # 6. Symptom Location & Radiation
+        location_radiation = st.text_input("**6. Symptom Location & Radiation**", value=st.session_state.form_data["location_radiation"])
+        # 7. Onset Type
+        onset = st.text_input("**7. Onset Type**", value=st.session_state.form_data["onset"])
+        # 8. Symptom Character
+        character = st.text_input("**8. Symptom Character**", value=st.session_state.form_data["character"])
+        # 9. Pain/Severity Scale (0-10)
+        severity = st.slider("**9. Pain/Severity Scale (0–10)**", 0, 10, value=st.session_state.form_data["severity"])
+
+    with col2:
+        st.subheader("Past Medical & Surgical")
+        # 10. Diabetes Diagnosis
         diabetes = st.selectbox(
-            "**Diabetes status**",
+            "**10. Diabetes Diagnosis**",
             ["No", "Type 1", "Type 2", "Gestational", "Pre‑diabetes"],
             index=["No","Type 1","Type 2","Gestational","Pre‑diabetes"].index(st.session_state.form_data["diabetes"])
         )
-        # Allergies – multiselect with common options
+        # 11. Major Past Diagnoses & Prior Surgeries
+        past_surgeries = st.text_area("**11. Major Past Diagnoses & Prior Surgeries**", value=st.session_state.form_data["past_surgeries"], height=70)
+
+        st.subheader("Drug & Allergy History")
+        # 12. Current Prescription Medications & Dosages
+        medications = st.text_area("**12. Current Prescription Medications & Dosages**", value=st.session_state.form_data["medications"], height=70)
+        # 13. Specific Allergies & Reactions
         allergy_options = ["Environmental/Dust", "Nuts/Food", "Medication", "Latex", "Other"]
         allergies = st.multiselect(
-            "**Allergies (check all that apply)**",
+            "**13. Specific Allergies & Reactions**",
             allergy_options,
             default=[a for a in st.session_state.form_data["allergies"] if a in allergy_options]
         )
-        # If "Other" is selected, allow free text
         other_allergy = ""
         if "Other" in allergies:
             other_allergy = st.text_input("Please specify other allergies")
-        # Combine selected + other
         if other_allergy:
             allergies = [a for a in allergies if a != "Other"] + [other_allergy]
         else:
             allergies = [a for a in allergies if a != "Other"]
 
-    with col2:
-        st.subheader("History of Presenting Illness (HPI)")
-        # Q6
-        site = st.text_input("**6. Site / Location**", value=st.session_state.form_data["site"])
-        # Q7
-        onset = st.text_input("**7. Onset Type**", value=st.session_state.form_data["onset"])
-        # Q8
-        character = st.text_input("**8. Symptom Character**", value=st.session_state.form_data["character"])
-        # Q9
-        associated = st.text_input("**9. Associated Symptoms**", value=st.session_state.form_data["associated"])
-        # Q10
-        severity = st.slider("**10. Severity Scale (0–10)**", 0, 10, value=st.session_state.form_data["severity"])
+        st.subheader("Personal & Social History")
+        # 14. Tobacco, Vaping, & Alcohol Use
+        tobacco_alcohol = st.text_area("**14. Tobacco, Vaping, & Alcohol Use**", value=st.session_state.form_data["tobacco_alcohol"], height=70)
+
+        st.subheader("Review of Systems")
+        # 15. Cardiovascular & Respiratory Symptoms
+        cardio_resp = st.text_area("**15. Cardiovascular & Respiratory Symptoms**", value=st.session_state.form_data["cardio_resp"], height=70)
 
     # Update session state with all inputs
     st.session_state.form_data.update({
         "name": name,
         "dob": dob.strftime("%Y-%m-%d"),
         "blood_group": blood_group,
-        "chief_complaint": chief_complaint,
+        "reason": reason,
         "duration": duration,
-        "site": site,
+        "location_radiation": location_radiation,
         "onset": onset,
         "character": character,
-        "associated": associated,
         "severity": severity,
         "diabetes": diabetes,
+        "past_surgeries": past_surgeries,
+        "medications": medications,
         "allergies": allergies,
+        "tobacco_alcohol": tobacco_alcohol,
+        "cardio_resp": cardio_resp,
     })
 
     # ---- SIMULATED VOICE ----
@@ -145,12 +156,11 @@ with tab1:
         with st.spinner("Processing voice input..."):
             time.sleep(1.5)
             st.session_state.form_data.update({
-                "chief_complaint": PREMATURE["chief_complaint"],
+                "reason": PREMATURE["reason"],
                 "duration": PREMATURE["duration"],
-                "site": PREMATURE["site"],
+                "location_radiation": PREMATURE["location_radiation"],
                 "onset": PREMATURE["onset"],
                 "character": PREMATURE["character"],
-                "associated": PREMATURE["associated"],
                 "severity": PREMATURE["severity"],
                 "diabetes": PREMATURE["diabetes"],
                 "allergies": PREMATURE["allergies"],
@@ -166,29 +176,29 @@ with tab1:
             time.sleep(0.8)
             st.write("Extracting text...")
             time.sleep(0.8)
-            st.write("Identifying diabetes & allergies...")
+            st.write("Identifying diabetes, allergies, and medications...")
             time.sleep(0.8)
             st.session_state.form_data.update({
                 "diabetes": PREMATURE["diabetes"],
                 "allergies": PREMATURE["allergies"],
+                "medications": PREMATURE["medications"],
             })
             status.update(label="OCR complete!", state="complete")
-        st.success("Prescription parsed! Diabetes & allergies updated.")
+        st.success("Prescription parsed! Diabetes, allergies & medications updated.")
         st.rerun()
 
     # ---- GENERATE QR ----
     if st.button("🔲 Generate Emergency QR", use_container_width=True):
         age = get_age(st.session_state.form_data["dob"])
+        # Simple payload – only essential info
         payload = {
-            "schema_version": "1.0",
             "patient_id": "P-60Y-2026-001",      # static demo ID
             "name": name,
             "age": age,
             "blood_group": blood_group,
             "diabetes": diabetes,
             "allergies": allergies,
-            "emergency_contacts": [{"relation": "Son", "name": "Rajesh Sharma", "phone": "+91-9876543210"}],
-            "access_url": "http://localhost:8501/Doctor_Dashboard"
+            "emergency_contact": "+91-9876543210 (Son: Rajesh)"
         }
         st.session_state.emergency_qr = payload
         st.success("QR generated! Switch to the 'Emergency QR' tab to scan.")
@@ -215,7 +225,7 @@ with tab2:
         with col2:
             st.subheader("Public Emergency Info")
             st.json(payload)
-            st.info("Scan to see **name, age, blood group, diabetes status, and allergies**.")
+            st.info("Scan reveals: **name, age, blood group, diabetes, allergies, and emergency contact**.")
     else:
         st.warning("No QR generated yet. Go to Patient Intake and click 'Generate Emergency QR'.")
 
@@ -225,43 +235,37 @@ with tab2:
 with tab3:
     st.header("👨‍⚕️ Doctor Dashboard – Full Workup")
     password = st.text_input("Enter Doctor Password", type="password")
-    st.caption("🔑 Hint: Password is **1234**")   # visible hint
+    st.caption("🔑 Hint: Password is **1234**")
     if password == "1234":
         st.success("Access granted")
-        # Display full premade profile (could also use session data, but keep static for demo clarity)
-        p = PREMATURE
-        age = get_age(p["dob"])
-        st.subheader(f"Patient: {p['name']} (Age: {age})")
+        # Use current form data (or fallback to PREMATURE)
+        f = st.session_state.form_data
+        age = get_age(f["dob"])
+        st.subheader(f"Patient: {f['name']} (Age: {age})")
         col1, col2 = st.columns(2)
         with col1:
-            st.metric("Blood Group", p["blood_group"])
-            st.metric("Diabetes", p["diabetes"])
-            st.write("**Allergies:**", ", ".join(p["allergies"]))
-            st.write("**Past Medical History:**", p["past_history"])
-            st.write("**Current Medications:**", p["medications"])
+            st.metric("Blood Group", f["blood_group"])
+            st.metric("Diabetes", f["diabetes"])
+            st.write("**Allergies:**", ", ".join(f["allergies"]))
+            st.write("**Past Diagnoses & Surgeries:**", f["past_surgeries"])
+            st.write("**Current Medications:**", f["medications"])
+            st.write("**Tobacco/Alcohol:**", f["tobacco_alcohol"])
         with col2:
-            st.write("**Chief Complaint:**", p["chief_complaint"])
-            st.write("**Duration:**", p["duration"])
-            st.write("**HPI Details:**")
-            st.write(f"- Site: {p['site']}")
-            st.write(f"- Onset: {p['onset']}")
-            st.write(f"- Character: {p['character']}")
-            st.write(f"- Associated: {p['associated']}")
-            st.write(f"- Severity: {p['severity']}/10")
+            st.write("**Main Reason for Visit:**", f["reason"])
+            st.write("**Duration:**", f["duration"])
+            st.write("**Location & Radiation:**", f["location_radiation"])
+            st.write("**Onset Type:**", f["onset"])
+            st.write("**Symptom Character:**", f["character"])
+            st.write(f"**Severity:** {f['severity']}/10")
+            st.write("**Cardio/Resp Symptoms:**", f["cardio_resp"])
         st.divider()
-        st.subheader("Family & Social History")
-        st.write(f"**Family History:** {p['family_history']}")
-        st.write(f"**Tobacco:** {p['tobacco']}")
-        st.write(f"**Alcohol:** {p['alcohol']}")
-        st.write(f"**General ROS:** {p['ros_general']}")
-        st.write(f"**Cardio/Resp ROS:** {p['ros_cardio']}")
-
         # Editable summary simulation
-        st.text_area("Edit Summary (simulated)", value=f"{age}yo male with chest pain. Hx of HTN, T2DM. Allergic to Dust & Penicillin. On Metformin and Amlodipine.")
+        summary = f"{age}yo patient with {f['reason'].lower()}. Hx: {f['past_surgeries']}. Allergies: {', '.join(f['allergies'])}. Meds: {f['medications']}."
+        st.text_area("Edit Summary (simulated)", value=summary)
         if st.button("✅ Approve & Push to EMR"):
             st.success("EMR updated successfully (simulated).")
     elif password:
         st.error("Invalid password. Try '1234'.")
 
 # ---------- FOOTER ----------
-st.caption("MediKiosk Allopathy Dual‑Tier Demo.")
+st.caption("MediKiosk Allopathy Dual‑Tier Demo – No backend, all data is static.")
