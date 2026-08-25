@@ -2,7 +2,6 @@ import streamlit as st
 import qrcode
 from io import BytesIO
 import json
-import time
 from datetime import datetime
 import speech_recognition as sr
 import pypdf
@@ -29,9 +28,20 @@ PREMATURE = {
     "cardio_resp": "Chest tightness, no SOB at rest"
 }
 
-# ---------- SESSION STATE ----------
+# ---------- SESSION STATE INITIALIZATION ----------
 if "form_data" not in st.session_state:
     st.session_state.form_data = {k: v for k, v in PREMATURE.items()}
+
+if "audio_transcript" not in st.session_state:
+    st.session_state.audio_transcript = ""
+
+if "ocr_extracted_text" not in st.session_state:
+    st.session_state.ocr_extracted_text = ""
+
+# Cache EasyOCR model to avoid reloading on every pass
+@st.cache_resource
+def get_ocr_reader():
+    return easyocr.Reader(['en'])
 
 # ---------- PAGE CONFIG ----------
 st.set_page_config(page_title="MediKiosk Demo", layout="wide")
@@ -106,7 +116,7 @@ with tab1:
         st.subheader("Review of Systems")
         cardio_resp = st.text_area("**15. Cardiovascular & Respiratory Symptoms**", value=st.session_state.form_data["cardio_resp"], height=70)
 
-    # Update session state with all manual inputs
+    # Sync manual field edits to state
     st.session_state.form_data.update({
         "name": name, "dob": dob.strftime("%Y-%m-%d"), "blood_group": blood_group,
         "reason": reason, "duration": duration, "location_radiation": location_radiation,
@@ -117,27 +127,30 @@ with tab1:
 
     st.divider()
     st.subheader("🎙️ Live Voice Intake (ASR)")
-    st.info("Speak your symptoms (e.g., 'I have severe chest pain and a history of Type 2 diabetes').")
+    st.info("Speak symptoms (e.g., 'I have severe chest pain and a history of Type 2 diabetes').")
     
-    # st.audio_input is available in Streamlit 1.36+
     audio_val = st.audio_input("Record Voice Intake")
     if audio_val:
-        with st.spinner("Transcribing..."):
+        with st.spinner("Transcribing audio..."):
             try:
                 r = sr.Recognizer()
                 with sr.AudioFile(audio_val) as source:
                     audio_data = r.record(source)
                     transcription = r.recognize_google(audio_data)
                 
+                st.session_state.audio_transcript = transcription
                 st.success(f"**Transcribed Speech:** {transcription}")
                 
-                # Basic keyword mapping for demonstration
+                # Update demographic/clinical fields from speech
                 text_lower = transcription.lower()
-                if "chest pain" in text_lower: st.session_state.form_data["reason"] = "Chest pain (Extracted via Voice)"
-                if "diabetes" in text_lower or "type 2" in text_lower: st.session_state.form_data["diabetes"] = "Type 2"
-                if "dust" in text_lower: st.session_state.form_data["allergies"].append("Environmental/Dust")
+                if "chest pain" in text_lower:
+                    st.session_state.form_data["reason"] = transcription
+                if "type 2" in text_lower or "diabetes" in text_lower:
+                    st.session_state.form_data["diabetes"] = "Type 2"
+                if "dust" in text_lower and "Environmental/Dust" not in st.session_state.form_data["allergies"]:
+                    st.session_state.form_data["allergies"].append("Environmental/Dust")
                 
-                st.info("Fields updated based on speech recognition. Refresh or check above to see changes.")
+                st.rerun()
             except sr.UnknownValueError:
                 st.error("Google Speech Recognition could not understand the audio.")
             except Exception as e:
@@ -151,32 +164,42 @@ with tab1:
         extracted_text = ""
         with st.status("Parsing document...", expanded=True) as status:
             if uploaded_file.type == "application/pdf":
-                st.write("Parsing direct PDF using `pypdf`...")
+                st.write("Parsing digital PDF via `pypdf`...")
                 reader = pypdf.PdfReader(uploaded_file)
                 for page in reader.pages:
-                    extracted_text += page.extract_text() + "\n"
+                    text = page.extract_text()
+                    if text:
+                        extracted_text += text + "\n"
             else:
-                st.write("Parsing image using `EasyOCR` (No system dependencies required)...")
-                reader = easyocr.Reader(['en'])
+                st.write("Extracting text via `EasyOCR`...")
+                reader = get_ocr_reader()
                 image = Image.open(uploaded_file)
                 image_np = np.array(image)
                 results = reader.readtext(image_np, detail=0)
-                extracted_text = " ".join(results)
+                extracted_text = "\n".join(results)
                 
             status.update(label="Parsing complete!", state="complete")
         
-        st.write("**Extracted Text:**")
-        st.text(extracted_text)
-
-        # Basic keyword mapping for demonstration
-        text_lower = extracted_text.lower()
-        if "type 2" in text_lower: st.session_state.form_data["diabetes"] = "Type 2"
-        if "metformin" in text_lower: st.session_state.form_data["medications"] = "Metformin detected"
+        st.session_state.ocr_extracted_text = extracted_text
         
-        st.success("Document parsed! Corresponding fields updated.")
+        # Update demographic/clinical fields from document text
+        text_lower = extracted_text.lower()
+        if "type 2" in text_lower:
+            st.session_state.form_data["diabetes"] = "Type 2"
+        if "metformin" in text_lower:
+            st.session_state.form_data["medications"] = extracted_text.strip()
+            
+        st.success("Document parsed! Fields synced.")
+        st.rerun()
+
+    # Show active intake logs if present
+    if st.session_state.audio_transcript:
+        st.caption(f"**Latest Voice Intake:** {st.session_state.audio_transcript}")
+    if st.session_state.ocr_extracted_text:
+        with st.expander("View Last Extracted Document Text"):
+            st.text(st.session_state.ocr_extracted_text)
 
     st.divider()
-    # ---- GENERATE QR ----
     if st.button("🔲 Generate Emergency QR", use_container_width=True):
         age = get_age(st.session_state.form_data["dob"])
         payload = {
@@ -192,7 +215,7 @@ with tab1:
         st.success("QR generated! Switch to the 'Emergency QR' tab to scan.")
 
 # ============================================================
-# TAB 2 & 3: EMERGENCY QR & DOCTOR DASHBOARD (Unchanged Logic)
+# TAB 2: EMERGENCY QR
 # ============================================================
 with tab2:
     st.header("🆘 Emergency QR Card")
@@ -215,6 +238,9 @@ with tab2:
     else:
         st.warning("No QR generated yet. Go to Patient Intake and click 'Generate Emergency QR'.")
 
+# ============================================================
+# TAB 3: DOCTOR DASHBOARD
+# ============================================================
 with tab3:
     st.header("👨‍⚕️ Doctor Dashboard – Full Workup")
     password = st.text_input("Enter Doctor Password", type="password")
@@ -223,22 +249,52 @@ with tab3:
         f = st.session_state.form_data
         age = get_age(f["dob"])
         st.subheader(f"Patient: {f['name']} (Age: {age})")
+        
         col1, col2 = st.columns(2)
         with col1:
             st.metric("Blood Group", f["blood_group"])
             st.metric("Diabetes", f["diabetes"])
-            st.write("**Allergies:**", ", ".join(f["allergies"]))
+            st.write("**Allergies:**", ", ".join(f["allergies"]) if f["allergies"] else "None reported")
             st.write("**Past Diagnoses & Surgeries:**", f["past_surgeries"])
             st.write("**Current Medications:**", f["medications"])
             st.write("**Tobacco/Alcohol:**", f["tobacco_alcohol"])
         with col2:
             st.write("**Main Reason:**", f["reason"])
             st.write("**Duration:**", f["duration"])
-            st.write("**Location:**", f["location_radiation"])
+            st.write("**Location & Radiation:**", f["location_radiation"])
             st.write("**Onset:**", f["onset"])
             st.write("**Character:**", f["character"])
             st.write(f"**Severity:** {f['severity']}/10")
             st.write("**Cardio/Resp:**", f["cardio_resp"])
+            
         st.divider()
-        summary = f"{age}yo patient with {f['reason'].lower()}. Hx: {f['past_surgeries']}. Allergies: {', '.join(f['allergies'])}. Meds: {f['medications']}."
-        st.text_area("Edit Summary", value=summary)
+        st.subheader("📥 Raw Intake Feeds (Voice & OCR)")
+        
+        col_audio, col_ocr = st.columns(2)
+        with col_audio:
+            st.markdown("##### 🎙️ Audio Transcription (ASR)")
+            if st.session_state.audio_transcript:
+                st.info(st.session_state.audio_transcript)
+            else:
+                st.caption("No audio recording captured for this session.")
+
+        with col_ocr:
+            st.markdown("##### 📄 Parsed Document Text (OCR / PDF)")
+            if st.session_state.ocr_extracted_text:
+                st.text_area("OCR / PDF Content", value=st.session_state.ocr_extracted_text, height=130, disabled=True)
+            else:
+                st.caption("No prescription or document uploaded for this session.")
+
+        st.divider()
+        summary = (
+            f"{age}yo patient presenting with {f['reason'].lower()}. "
+            f"Hx: {f['past_surgeries']}. Allergies: {', '.join(f['allergies']) if f['allergies'] else 'NKDA'}. "
+            f"Meds: {f['medications']}."
+        )
+        st.text_area("Edit Clinical Summary", value=summary, height=100)
+        
+        if st.button("✅ Approve & Push to EMR", use_container_width=True):
+            st.success("EMR updated successfully.")
+            
+    elif password:
+        st.error("Invalid password. Try '1234'.")
